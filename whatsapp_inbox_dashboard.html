@@ -1,0 +1,315 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans)}
+.app{display:flex;height:580px;border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);overflow:hidden;background:var(--color-background-primary)}
+.sidebar{width:300px;min-width:300px;border-right:0.5px solid var(--color-border-tertiary);display:flex;flex-direction:column}
+.sidebar-header{padding:14px 16px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;gap:10px}
+.sidebar-header h2{font-size:15px;font-weight:500;color:var(--color-text-primary);flex:1}
+.status-dot{width:8px;height:8px;border-radius:50%;background:#22c55e;flex-shrink:0}
+.search-box{padding:10px 12px;border-bottom:0.5px solid var(--color-border-tertiary)}
+.search-box input{width:100%;padding:7px 10px;border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);background:var(--color-background-secondary);font-size:13px;color:var(--color-text-primary);outline:none}
+.conv-list{flex:1;overflow-y:auto}
+.conv-item{padding:12px 14px;border-bottom:0.5px solid var(--color-border-tertiary);cursor:pointer;display:flex;gap:10px;align-items:flex-start;transition:background 0.1s}
+.conv-item:hover{background:var(--color-background-secondary)}
+.conv-item.active{background:var(--color-background-info)}
+.avatar{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:500;flex-shrink:0}
+.av-blue{background:#E6F1FB;color:#185FA5}
+.av-green{background:#EAF3DE;color:#3B6D11}
+.av-purple{background:#EEEDFE;color:#534AB7}
+.av-amber{background:#FAEEDA;color:#854F0B}
+.conv-info{flex:1;min-width:0}
+.conv-name{font-size:13px;font-weight:500;color:var(--color-text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.conv-last{font-size:12px;color:var(--color-text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.conv-meta{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.conv-time{font-size:11px;color:var(--color-text-tertiary)}
+.unread-badge{background:#22c55e;color:#fff;font-size:11px;font-weight:500;border-radius:10px;padding:1px 6px;min-width:18px;text-align:center}
+.manual-badge{background:#FAEEDA;color:#854F0B;font-size:10px;border-radius:var(--border-radius-md);padding:2px 6px}
+.chat-area{flex:1;display:flex;flex-direction:column;background:var(--color-background-secondary)}
+.chat-header{padding:12px 16px;background:var(--color-background-primary);border-bottom:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;gap:10px}
+.chat-header-info{flex:1}
+.chat-header-name{font-size:14px;font-weight:500;color:var(--color-text-primary)}
+.chat-header-status{font-size:12px;color:var(--color-text-secondary)}
+.chat-header-actions{display:flex;gap:8px}
+.icon-btn{width:32px;height:32px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-tertiary);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--color-text-secondary)}
+.icon-btn:hover{background:var(--color-background-secondary)}
+.messages-area{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:10px}
+.msg{max-width:68%;display:flex;flex-direction:column}
+.msg.user{align-self:flex-start}
+.msg.agent{align-self:flex-end}
+.msg-bubble{padding:9px 13px;border-radius:12px;font-size:13px;line-height:1.5}
+.msg.user .msg-bubble{background:var(--color-background-primary);color:var(--color-text-primary);border:0.5px solid var(--color-border-tertiary);border-bottom-left-radius:3px}
+.msg.agent .msg-bubble{background:#dcf8c6;color:#1a3d1a;border-bottom-right-radius:3px}
+.msg-meta{font-size:11px;color:var(--color-text-tertiary);margin-top:3px;display:flex;align-items:center;gap:4px}
+.msg.agent .msg-meta{justify-content:flex-end}
+.bot-tag{font-size:10px;background:#EAF3DE;color:#3B6D11;padding:1px 5px;border-radius:4px}
+.manual-tag{font-size:10px;background:#FAEEDA;color:#854F0B;padding:1px 5px;border-radius:4px}
+.reply-area{padding:12px 16px;background:var(--color-background-primary);border-top:0.5px solid var(--color-border-tertiary)}
+.mode-toggle{display:flex;gap:8px;margin-bottom:10px}
+.mode-btn{font-size:12px;padding:4px 12px;border-radius:20px;border:0.5px solid var(--color-border-tertiary);background:transparent;cursor:pointer;color:var(--color-text-secondary)}
+.mode-btn.active{background:#FAEEDA;color:#854F0B;border-color:#EF9F27}
+.reply-row{display:flex;gap:8px;align-items:flex-end}
+.reply-row textarea{flex:1;padding:9px 12px;border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);font-size:13px;color:var(--color-text-primary);background:var(--color-background-secondary);resize:none;min-height:40px;max-height:100px;outline:none;font-family:var(--font-sans);line-height:1.5}
+.send-btn{width:40px;height:40px;border-radius:50%;background:#25D366;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#fff;flex-shrink:0}
+.send-btn:hover{background:#20bd5a}
+.send-btn:disabled{background:var(--color-background-secondary);color:var(--color-text-tertiary);cursor:not-allowed}
+.empty-state{flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;color:var(--color-text-tertiary)}
+.empty-state i{font-size:48px;opacity:0.3}
+.webhook-banner{background:#E6F1FB;border-bottom:0.5px solid #B5D4F4;padding:8px 16px;font-size:12px;color:#185FA5;display:flex;align-items:center;gap:8px}
+.settings-panel{padding:16px;flex:1;overflow-y:auto}
+.settings-panel h3{font-size:14px;font-weight:500;color:var(--color-text-primary);margin-bottom:12px}
+.form-group{margin-bottom:12px}
+.form-group label{font-size:12px;color:var(--color-text-secondary);display:block;margin-bottom:4px}
+.form-group input{width:100%;padding:8px 10px;border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);font-size:13px;color:var(--color-text-primary);background:var(--color-background-secondary);outline:none}
+.save-btn{background:#185FA5;color:#fff;border:none;border-radius:var(--border-radius-md);padding:8px 16px;font-size:13px;cursor:pointer;width:100%}
+.save-btn:hover{background:#0C447C}
+</style>
+
+<h2 class="sr-only">WhatsApp Inbox Dashboard — view and reply to WhatsApp conversations from your n8n bot</h2>
+
+<div class="app" id="app">
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <div style="width:32px;height:32px;border-radius:50%;background:#25D366;display:flex;align-items:center;justify-content:center"><i class="ti ti-brand-whatsapp" style="font-size:18px;color:#fff" aria-hidden="true"></i></div>
+      <h2>WhatsApp Inbox</h2>
+      <button class="icon-btn" id="settingsBtn" title="Webhook Settings" aria-label="Settings"><i class="ti ti-settings" style="font-size:16px" aria-hidden="true"></i></button>
+    </div>
+    <div class="search-box">
+      <input type="text" placeholder="Search conversations..." id="searchInput" />
+    </div>
+    <div class="conv-list" id="convList"></div>
+  </div>
+
+  <div class="chat-area" id="chatArea">
+    <div class="webhook-banner" id="webhookBanner">
+      <i class="ti ti-info-circle" style="font-size:15px" aria-hidden="true"></i>
+      Demo mode — Configure your n8n webhook URL in settings to connect live data
+    </div>
+    <div class="empty-state" id="emptyState">
+      <i class="ti ti-message-2" aria-hidden="true"></i>
+      <p style="font-size:14px">Select a conversation</p>
+    </div>
+    <div id="chatView" style="display:none;flex:1;flex-direction:column;overflow:hidden">
+      <div class="chat-header" id="chatHeader"></div>
+      <div class="messages-area" id="messagesArea"></div>
+      <div class="reply-area">
+        <div class="mode-toggle">
+          <button class="mode-btn active" id="manualBtn" onclick="setMode('manual')"><i class="ti ti-user" style="font-size:12px;vertical-align:-1px" aria-hidden="true"></i> Manual reply</button>
+          <button class="mode-btn" id="aiBtn" onclick="setMode('ai')"><i class="ti ti-robot" style="font-size:12px;vertical-align:-1px" aria-hidden="true"></i> AI auto-reply</button>
+        </div>
+        <div class="reply-row">
+          <textarea id="replyInput" placeholder="Type a reply..." rows="1" onInput="autoResize(this)"></textarea>
+          <button class="send-btn" id="sendBtn" onclick="sendReply()"><i class="ti ti-send" style="font-size:16px" aria-hidden="true"></i></button>
+        </div>
+      </div>
+    </div>
+    <div id="settingsView" style="display:none;flex-direction:column">
+      <div class="chat-header">
+        <button class="icon-btn" onclick="closeSettings()" aria-label="Back"><i class="ti ti-arrow-left" style="font-size:16px" aria-hidden="true"></i></button>
+        <div class="chat-header-info" style="margin-left:8px">
+          <div class="chat-header-name">n8n Webhook Settings</div>
+          <div class="chat-header-status">Connect your live WhatsApp data</div>
+        </div>
+      </div>
+      <div class="settings-panel">
+        <h3>Configure n8n Webhooks</h3>
+        <div class="form-group">
+          <label>n8n Base URL</label>
+          <input type="text" id="n8nUrl" placeholder="https://n8n.curvetechsolution.online" value="https://n8n.curvetechsolution.online" />
+        </div>
+        <div class="form-group">
+          <label>Fetch Conversations Webhook Path</label>
+          <input type="text" id="fetchPath" placeholder="/webhook/whatsapp-get-chats" value="/webhook/whatsapp-get-chats" />
+        </div>
+        <div class="form-group">
+          <label>Send Reply Webhook Path</label>
+          <input type="text" id="sendPath" placeholder="/webhook/whatsapp-send" value="/webhook/whatsapp-send" />
+        </div>
+        <div class="form-group">
+          <label>Auth Token (optional)</label>
+          <input type="password" id="authToken" placeholder="Bearer token if needed" />
+        </div>
+        <button class="save-btn" onclick="saveSettings()">Save & Connect</button>
+        <div style="margin-top:16px;padding:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
+          <p style="font-size:12px;color:var(--color-text-secondary);font-weight:500;margin-bottom:8px">n8n mai yeh 2 workflows banana hoga:</p>
+          <p style="font-size:12px;color:var(--color-text-secondary);margin-bottom:6px"><strong>1.</strong> GET <code style="font-size:11px;background:var(--color-background-primary);padding:1px 4px;border-radius:3px">/webhook/whatsapp-get-chats</code> — sab conversations return kare JSON mai</p>
+          <p style="font-size:12px;color:var(--color-text-secondary)"><strong>2.</strong> POST <code style="font-size:11px;background:var(--color-background-primary);padding:1px 4px;border-radius:3px">/webhook/whatsapp-send</code> — <code style="font-size:11px;background:var(--color-background-primary);padding:1px 4px;border-radius:3px">{to, message}</code> receive kare aur WhatsApp pe bheje</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const DEMO_CONVS = [
+  {id:'1',name:'Ahmed Raza',phone:'+923001234567',avatar:'AR',avClass:'av-blue',unread:3,lastMsg:'Haan bhai, pricing kya hai?',time:'2m',bot:false,msgs:[
+    {from:'user',text:'Aoa, SEO ki services chahiye thi',time:'10:30 AM',isBot:false},
+    {from:'user',text:'Kya aap website audit bhi karte ho?',time:'10:31 AM',isBot:false},
+    {from:'agent',text:'Walaikum Assalam! Haan bilkul, hum SEO aur website audit dono karte hain. Curve Tech Solution mai aapka khairMaqdam!',time:'10:31 AM',isBot:true},
+    {from:'user',text:'Haan bhai, pricing kya hai?',time:'10:45 AM',isBot:false}
+  ]},
+  {id:'2',name:'Sara Khan',phone:'+923121234567',avatar:'SK',avClass:'av-purple',unread:0,lastMsg:'Thank you, will check!',time:'15m',bot:true,msgs:[
+    {from:'user',text:'Hi, I need Google Ads management',time:'9:00 AM',isBot:false},
+    {from:'agent',text:'Hello Sara! Great, we specialize in Google Ads for medical and dental clinics in NYC. Can you share more about your business?',time:'9:01 AM',isBot:true},
+    {from:'user',text:'I run a dermatology clinic in Manhattan',time:'9:05 AM',isBot:false},
+    {from:'agent',text:'Perfect! We have great experience with dermatology clinics. I will send you our packages shortly.',time:'9:06 AM',isBot:true},
+    {from:'user',text:'Thank you, will check!',time:'9:10 AM',isBot:false}
+  ]},
+  {id:'3',name:'Usman Ali',phone:'+923331234567',avatar:'UA',avClass:'av-green',unread:1,lastMsg:'Kab tak ready hogi website?',time:'1h',bot:false,msgs:[
+    {from:'user',text:'Website development ka kaam kab start hoga?',time:'8:00 AM',isBot:false},
+    {from:'agent',text:'Usman bhai, aapka project queue mai hai. 2-3 din mai start ho jayega.',time:'8:02 AM',isBot:true},
+    {from:'user',text:'Kab tak ready hogi website?',time:'8:30 AM',isBot:false}
+  ]},
+  {id:'4',name:'Dr. Fatima',phone:'+923451234567',avatar:'DF',avClass:'av-amber',unread:0,lastMsg:'Perfect, send the proposal',time:'3h',bot:true,msgs:[
+    {from:'user',text:'I need social media management for my psychiatry practice',time:'Yesterday',isBot:false},
+    {from:'agent',text:'Dr. Fatima, we work with several psychiatry practices in NYC. Our social media package includes content creation, posting, and engagement.',time:'Yesterday',isBot:true},
+    {from:'user',text:'What platforms do you manage?',time:'Yesterday',isBot:false},
+    {from:'agent',text:'We manage Instagram, Facebook, LinkedIn, and Google Business Profile. All tailored for medical professionals.',time:'Yesterday',isBot:true},
+    {from:'user',text:'Perfect, send the proposal',time:'Yesterday',isBot:false}
+  ]}
+];
+
+let convs = JSON.parse(JSON.stringify(DEMO_CONVS));
+let activeId = null;
+let replyMode = 'manual';
+let settings = {n8nUrl:'https://n8n.curvetechsolution.online',fetchPath:'/webhook/whatsapp-get-chats',sendPath:'/webhook/whatsapp-send',authToken:''};
+let isLive = false;
+
+function renderConvList(filter=''){
+  const list = document.getElementById('convList');
+  const filtered = convs.filter(c=>c.name.toLowerCase().includes(filter.toLowerCase())||c.phone.includes(filter));
+  list.innerHTML = filtered.map(c=>`
+    <div class="conv-item ${activeId===c.id?'active':''}" onclick="openConv('${c.id}')">
+      <div class="avatar ${c.avClass}">${c.avatar}</div>
+      <div class="conv-info">
+        <div class="conv-name">${c.name}</div>
+        <div class="conv-last">${c.lastMsg||''}</div>
+      </div>
+      <div class="conv-meta">
+        <span class="conv-time">${c.time}</span>
+        ${c.unread>0?`<span class="unread-badge">${c.unread}</span>`:''}
+        ${!c.bot?`<span class="manual-badge">manual</span>`:''}
+      </div>
+    </div>
+  `).join('');
+}
+
+function openConv(id){
+  activeId=id;
+  const c=convs.find(x=>x.id===id);
+  if(!c)return;
+  c.unread=0;
+  document.getElementById('emptyState').style.display='none';
+  document.getElementById('chatView').style.display='flex';
+  document.getElementById('settingsView').style.display='none';
+  document.getElementById('chatHeader').innerHTML=`
+    <div class="avatar ${c.avClass}" style="width:34px;height:34px;font-size:12px">${c.avatar}</div>
+    <div class="chat-header-info">
+      <div class="chat-header-name">${c.name}</div>
+      <div class="chat-header-status">${c.phone}</div>
+    </div>
+    <div class="chat-header-actions">
+      <button class="icon-btn" title="Mark as bot" onclick="toggleBot('${id}')"><i class="ti ti-robot" style="font-size:15px" aria-hidden="true"></i></button>
+      <button class="icon-btn" title="Refresh" onclick="fetchMessages('${id}')"><i class="ti ti-refresh" style="font-size:15px" aria-hidden="true"></i></button>
+    </div>`;
+  renderMessages(c);
+  renderConvList(document.getElementById('searchInput').value);
+}
+
+function renderMessages(c){
+  const area=document.getElementById('messagesArea');
+  area.innerHTML=c.msgs.map(m=>`
+    <div class="msg ${m.from==='user'?'user':'agent'}">
+      <div class="msg-bubble">${m.text}</div>
+      <div class="msg-meta">
+        <span>${m.time}</span>
+        ${m.from==='agent'?(m.isBot?'<span class="bot-tag">bot</span>':'<span class="manual-tag">you</span>'):''}
+      </div>
+    </div>
+  `).join('');
+  area.scrollTop=area.scrollHeight;
+}
+
+function setMode(m){
+  replyMode=m;
+  document.getElementById('manualBtn').className='mode-btn'+(m==='manual'?' active':'');
+  document.getElementById('aiBtn').className='mode-btn'+(m==='ai'?' active':'');
+  const inp=document.getElementById('replyInput');
+  inp.placeholder=m==='ai'?'AI auto-reply mode — bot will handle this chat':'Type a manual reply...';
+  inp.disabled=m==='ai';
+  document.getElementById('sendBtn').disabled=m==='ai';
+}
+
+async function sendReply(){
+  const inp=document.getElementById('replyInput');
+  const txt=inp.value.trim();
+  if(!txt||!activeId)return;
+  const c=convs.find(x=>x.id===activeId);
+  if(!c)return;
+  const msg={from:'agent',text:txt,time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),isBot:false};
+  c.msgs.push(msg);
+  c.lastMsg=txt;
+  c.time='now';
+  c.bot=false;
+  inp.value='';
+  inp.style.height='';
+  renderMessages(c);
+  renderConvList(document.getElementById('searchInput').value);
+  if(isLive){
+    try{
+      const headers={'Content-Type':'application/json'};
+      if(settings.authToken)headers['Authorization']=settings.authToken;
+      await fetch(settings.n8nUrl+settings.sendPath,{method:'POST',headers,body:JSON.stringify({to:c.phone,message:txt,contactName:c.name})});
+    }catch(e){console.warn('Send failed:',e)}
+  }
+}
+
+function toggleBot(id){
+  const c=convs.find(x=>x.id===id);
+  if(c)c.bot=!c.bot;
+  renderConvList(document.getElementById('searchInput').value);
+}
+
+async function fetchMessages(id){
+  if(!isLive)return;
+  try{
+    const headers={};
+    if(settings.authToken)headers['Authorization']=settings.authToken;
+    const res=await fetch(settings.n8nUrl+settings.fetchPath+'?phone='+encodeURIComponent(convs.find(x=>x.id===id)?.phone||''),{headers});
+    const data=await res.json();
+    if(data.messages){
+      const c=convs.find(x=>x.id===id);
+      if(c){c.msgs=data.messages;renderMessages(c);}
+    }
+  }catch(e){console.warn('Fetch failed:',e)}
+}
+
+function openSettings(){
+  document.getElementById('emptyState').style.display='none';
+  document.getElementById('chatView').style.display='none';
+  document.getElementById('settingsView').style.display='flex';
+}
+function closeSettings(){
+  if(activeId)openConv(activeId);
+  else{document.getElementById('settingsView').style.display='none';document.getElementById('emptyState').style.display='flex';}
+}
+function saveSettings(){
+  settings.n8nUrl=document.getElementById('n8nUrl').value.trim().replace(/\/$/,'');
+  settings.fetchPath=document.getElementById('fetchPath').value.trim();
+  settings.sendPath=document.getElementById('sendPath').value.trim();
+  settings.authToken=document.getElementById('authToken').value.trim();
+  isLive=true;
+  document.getElementById('webhookBanner').innerHTML='<i class="ti ti-check" style="font-size:15px" aria-hidden="true"></i> Connected to '+settings.n8nUrl;
+  document.getElementById('webhookBanner').style.background='#EAF3DE';
+  document.getElementById('webhookBanner').style.borderColor='#C0DD97';
+  document.getElementById('webhookBanner').style.color='#3B6D11';
+  closeSettings();
+}
+function autoResize(el){el.style.height='';el.style.height=Math.min(el.scrollHeight,100)+'px';}
+
+document.getElementById('settingsBtn').onclick=openSettings;
+document.getElementById('searchInput').oninput=e=>renderConvList(e.target.value);
+document.getElementById('replyInput').onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendReply();}};
+
+renderConvList();
+</script>
