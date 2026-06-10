@@ -387,11 +387,52 @@ let cfg = {
   interval: 10
 };
 
-// load saved settings
-try {
-  const s = localStorage.getItem('waCfg');
-  if(s){ cfg = {...cfg, ...JSON.parse(s)}; isLive = true; applyBanner(); startAutoRefresh(); }
-} catch(e){}
+// ── PAGE LOAD: saved settings hain toh auto-connect (dobara Save & Connect ki zaroorat nahi) ──
+window.addEventListener('DOMContentLoaded', async () => {
+  try {
+    const s = localStorage.getItem('waCfg');
+    if(!s){ renderList(); return; } // pehli baar — demo dikhao
+    cfg = {...cfg, ...JSON.parse(s)};
+    isLive = true;
+    applyBanner();
+    convs = [];
+    renderList();
+    await loadConversations(); // auto-connect on page load
+    startAutoRefresh();
+  } catch(e){ renderList(); console.warn('Init:', e); }
+});
+
+// ── CONVERSATIONS LOAD (page load + saveSettings dono use karte hain) ──
+async function loadConversations(){
+  const b = document.getElementById('banner');
+  b.className = 'banner connected';
+  b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Conversations load ho rahi hain...';
+  try {
+    const headers = {};
+    if(cfg.token) headers['Authorization'] = cfg.token;
+    const res = await fetch(cfg.url + cfg.fetch, {headers});
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    const list = data.conversations || (Array.isArray(data) ? data : null);
+    if(list && list.length > 0){
+      convs = list.map(sc => ({
+        avc: 'av-teal',
+        av: (sc.name||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase(),
+        msgs: [],
+        unread: 0,
+        ...sc,
+      }));
+      applyBanner();
+    } else {
+      b.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> n8n se koi conversations nahi aayin';
+      b.className = 'banner';
+    }
+  } catch(e){
+    b.innerHTML = '<i class="fa-solid fa-circle-xmark"></i> Connection fail: ' + e.message + ' — URL check karein';
+    b.className = 'banner';
+  }
+  renderList();
+}
 
 function applyBanner(){
   const b = document.getElementById('banner');
@@ -540,30 +581,96 @@ async function fetchMsgs(id, silent=false){
   try{
     const headers = {};
     if(cfg.token) headers['Authorization'] = cfg.token;
-    const res = await fetch(cfg.url + cfg.fetch, {headers});
+
+    // Build URL — agar id diya hai toh specific chat fetch karo
+    let fetchUrl = cfg.url + cfg.fetch;
+    if(id) fetchUrl += (fetchUrl.includes('?') ? '&' : '?') + 'contactId=' + encodeURIComponent(id);
+
+    const res = await fetch(fetchUrl, {headers});
+    if(!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
 
-    if(data.conversations){
-      // Smart merge: keep local unsent state, update with server data
+    // ── Case 1: Server ne conversations array bheja ──
+    if(data.conversations && Array.isArray(data.conversations)){
       const prevConvs = convs;
-      convs = data.conversations;
+      convs = data.conversations.map(sc => {
+        const prev = prevConvs.find(p => p.id === sc.id || p.phone === sc.phone);
+        return {
+          // defaults agar server ne nahi bheja
+          avc: 'av-teal',
+          av: (sc.name||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase(),
+          msgs: [],
+          unread: 0,
+          ...prev,       // local state preserve karo
+          ...sc,         // server data override kare
+          // unread: server ki value use karo, warna local
+          unread: sc.unread !== undefined ? sc.unread : (prev ? prev.unread : 0),
+          // msgs: server ki msgs hain toh use karo warna local rakhو
+          msgs: (sc.msgs && sc.msgs.length > 0) ? sc.msgs : (prev ? prev.msgs : []),
+        };
+      });
 
-      // Preserve unread counts from local if server doesn't send them
+      // ── Naye message detect karo — unread badge update karo ──
       convs.forEach(sc => {
+        if(sc.id === activeId) return; // open chat mein unread count nahi badhao
         const prev = prevConvs.find(p => p.id === sc.id);
-        if(prev && sc.unread === undefined) sc.unread = prev.unread;
+        const prevLen = prev ? (prev.msgs||[]).length : 0;
+        const newLen = (sc.msgs||[]).length;
+        if(newLen > prevLen){
+          sc.unread = (sc.unread || 0) + (newLen - prevLen);
+          // Browser notification (agar permission mili ho)
+          if(Notification.permission === 'granted' && sc.msgs && sc.msgs.length > 0){
+            const lastMsg = sc.msgs[sc.msgs.length-1];
+            new Notification(sc.name || 'New Message', { body: lastMsg.text || '', icon: '' });
+          }
+        }
       });
 
       renderList(document.getElementById('searchInput').value);
 
-      // If currently viewing a conv, re-render its messages
       if(activeId){
         const updated = convs.find(x=>x.id===activeId);
         if(updated) renderMsgs(updated);
       }
+      return;
     }
+
+    // ── Case 2: Server ne flat array bheja (har item ek message hai) ──
+    if(Array.isArray(data)){
+      const messages = data;
+      if(id && activeId === id){
+        const c = convs.find(x=>x.id===id);
+        if(c && messages.length > 0){
+          c.msgs = messages.map(m => ({
+            from: m.from || m.direction || (m.fromMe ? 'agent' : 'user'),
+            text: m.text || m.body || m.message || '',
+            time: m.time || m.timestamp || new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),
+            isBot: m.isBot || false,
+          }));
+          c.lastMsg = c.msgs[c.msgs.length-1]?.text || c.lastMsg;
+          renderMsgs(c);
+          renderList(document.getElementById('searchInput').value);
+        }
+      }
+      return;
+    }
+
+    // ── Case 3: Single conversation object ──
+    if(data.id || data.phone){
+      const sc = data;
+      const idx = convs.findIndex(p => p.id === sc.id || p.phone === sc.phone);
+      if(idx >= 0){
+        convs[idx] = { ...convs[idx], ...sc,
+          msgs: (sc.msgs && sc.msgs.length > 0) ? sc.msgs : convs[idx].msgs,
+          unread: sc.unread !== undefined ? sc.unread : convs[idx].unread,
+        };
+        renderList(document.getElementById('searchInput').value);
+        if(activeId === convs[idx].id) renderMsgs(convs[idx]);
+      }
+    }
+
   } catch(e){
-    if(!silent) console.warn('Fetch error:', e);
+    if(!silent) console.warn('Fetch error:', e.message);
   }
 }
 
@@ -581,11 +688,11 @@ function startAutoRefresh(){
   indicator.classList.add('visible');
   status.textContent = `Live — har ${interval} sec mein update ho raha hai`;
 
-  // Immediate fetch on start
-  fetchMsgs(activeId, true);
+  // Immediate fetch on start (all conversations, not just active)
+  fetchMsgs(null, true);
 
   autoRefreshTimer = setInterval(async () => {
-    await fetchMsgs(activeId, true);
+    await fetchMsgs(null, true);
   }, interval * 1000);
 }
 
@@ -628,7 +735,7 @@ function closeSettings(){
   else { document.getElementById('emptyState').style.display='flex'; }
 }
 
-function saveSettings(){
+async function saveSettings(){
   cfg.url = document.getElementById('cfg_url').value.trim().replace(/\/$/,'');
   cfg.fetch = document.getElementById('cfg_fetch').value.trim();
   cfg.send = document.getElementById('cfg_send').value.trim();
@@ -637,8 +744,27 @@ function saveSettings(){
   try { localStorage.setItem('waCfg', JSON.stringify(cfg)); } catch(e){}
   isLive = true;
   applyBanner();
-  startAutoRefresh();
+
+  // Browser notifications ki permission maango
+  if('Notification' in window && Notification.permission === 'default'){
+    Notification.requestPermission();
+  }
+
+  // Demo data clear karo aur live data load karo
+  convs = [];
+  activeId = null;
+  renderList();
+
+  // Banner update karo — loading state
+  const b = document.getElementById('banner');
+  b.className = 'banner connected';
+  b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> n8n se conversations load ho rahi hain...';
+
   closeSettings();
+
+  // loadConversations function use karo (duplicate code nahi)
+  await loadConversations();
+  startAutoRefresh();
 }
 
 // Pause auto-refresh when tab is hidden (battery saving)
@@ -647,8 +773,7 @@ document.addEventListener('visibilitychange', () => {
   else if(isLive){ startAutoRefresh(); }
 });
 
-// init
-renderList();
+// init DOMContentLoaded pe hota hai (upar dekho)
 </script>
 </body>
 </html>
