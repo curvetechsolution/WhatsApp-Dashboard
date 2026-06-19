@@ -387,17 +387,18 @@ let cfg = {
   interval: 10
 };
 
-// ── PAGE LOAD: saved settings hain toh auto-connect (dobara Save & Connect ki zaroorat nahi) ──
+// ── PAGE LOAD: URL fix hai, isliye hamesha live connect karo (kisi save ki zaroorat nahi) ──
 window.addEventListener('DOMContentLoaded', async () => {
   try {
+    // Agar pehle se browser mein saved settings hain to unko priority do (override allow)
     const s = localStorage.getItem('waCfg');
-    if(!s){ renderList(); return; } // pehli baar — demo dikhao
-    cfg = {...cfg, ...JSON.parse(s)};
+    if(s){ cfg = {...cfg, ...JSON.parse(s)}; }
+
     isLive = true;
     applyBanner();
     convs = [];
     renderList();
-    await loadConversations(); // auto-connect on page load
+    await loadConversations(); // hamesha auto-connect, har device/browser pe
     startAutoRefresh();
   } catch(e){ renderList(); console.warn('Init:', e); }
 });
